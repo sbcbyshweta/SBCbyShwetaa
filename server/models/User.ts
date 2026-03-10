@@ -20,7 +20,8 @@ required:true
 
 role:{
 type:String,
-default:"admin"
+enum:["admin","user"],
+default:"user"
 }
 
 },{timestamps:true})

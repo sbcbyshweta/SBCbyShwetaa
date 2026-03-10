@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { API_URL } from "@/lib/api";
 
 import loginBg from "@/assets/login.jpg";
 import logo from "@/assets/dark_logo.jpg";
@@ -16,21 +17,22 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
+    name: "",
     email: "",
     password: "",
-    name: "",
     confirmPassword: "",
   });
 
-  /* -------------------------------- */
-  /* Redirect if already logged in    */
-  /* -------------------------------- */
+  /* ----------------------------- */
+  /* Redirect if already logged in */
+  /* ----------------------------- */
 
   useEffect(() => {
 
+    const token = localStorage.getItem("token");
     const user = localStorage.getItem("user");
 
-    if (user) {
+    if (token && user) {
 
       const parsed = JSON.parse(user);
 
@@ -45,9 +47,9 @@ export default function Login() {
   }, [navigate]);
 
 
-  /* -------------------------------- */
-  /* Input change handler             */
-  /* -------------------------------- */
+  /* ----------------------------- */
+  /* Input change handler          */
+  /* ----------------------------- */
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 
@@ -61,9 +63,9 @@ export default function Login() {
   };
 
 
-  /* -------------------------------- */
-  /* Create separate user storage     */
-  /* -------------------------------- */
+  /* ----------------------------- */
+  /* Create storage per user       */
+  /* ----------------------------- */
 
   const createUserStorage = (email: string) => {
 
@@ -84,9 +86,9 @@ export default function Login() {
   };
 
 
-  /* -------------------------------- */
-  /* Form submit                      */
-  /* -------------------------------- */
+  /* ----------------------------- */
+  /* Form submit handler           */
+  /* ----------------------------- */
 
   const handleSubmit = async (e: React.FormEvent) => {
 
@@ -94,25 +96,79 @@ export default function Login() {
 
     setError("");
 
+    /* ---------------- SIGNUP ---------------- */
+
     if (!isLogin) {
+
+      if (!formData.name) {
+        setError("Name is required");
+        return;
+      }
 
       if (formData.password !== formData.confirmPassword) {
         setError("Passwords do not match");
         return;
       }
 
-      alert("Signup disabled in demo. Please login.");
-      setIsLogin(true);
+      try {
+
+        setLoading(true);
+
+        const response = await fetch(`${API_URL}/signup`, {
+
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+          }),
+
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+          setError(data.message || "Signup failed");
+          return;
+
+        }
+
+        alert("Account created successfully. Please login.");
+
+        setIsLogin(true);
+
+      }
+
+      catch {
+
+        setError("Server error. Try again.");
+
+      }
+
+      finally {
+
+        setLoading(false);
+
+      }
 
       return;
 
     }
 
+
+    /* ---------------- LOGIN ---------------- */
+
     try {
 
       setLoading(true);
 
-      const response = await fetch("http://localhost:8080/api/login", {
+      const response = await fetch(`${API_URL}/login`, {
 
         method: "POST",
 
@@ -136,15 +192,23 @@ export default function Login() {
 
       }
 
-      /* Save logged in user */
+      /* Save authentication */
 
-      localStorage.setItem("user", JSON.stringify(data));
+      localStorage.setItem("token", data.token);
 
-      /* Create user storage */
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          email: data.email,
+          role: data.role,
+        })
+      );
+
+      /* Create storage */
 
       createUserStorage(data.email);
 
-      /* Role based redirect */
+      /* Redirect */
 
       if (data.role === "admin") {
         navigate("/admin");
@@ -169,37 +233,45 @@ export default function Login() {
   };
 
 
-  /* -------------------------------- */
-  /* UI                               */
-  /* -------------------------------- */
+  /* ----------------------------- */
+  /* Google login (placeholder)    */
+  /* ----------------------------- */
+
+  const handleGoogleLogin = () => {
+
+    alert("Google login integration coming soon");
+
+  };
+
+
+  /* ----------------------------- */
+  /* UI                            */
+  /* ----------------------------- */
 
   return (
 
     <div className="relative min-h-screen">
 
-      {/* Background Image */}
+      {/* Background */}
 
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${loginBg})` }}
       />
 
-      {/* Dark + Blur Overlay */}
-
-      <div className="absolute inset-0 bg-black/40 backdrop" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
       <Header />
 
 
-      {/* Right aligned login card */}
+      {/* Login card */}
 
       <div className="relative flex justify-end items-center min-h-[calc(100vh-80px)] px-10">
 
         <div className="w-full max-w-2xl">
 
-          {/* Glass Card */}
-
           <div className="bg-white/20 backdrop-blur-xl border border-white/30 shadow-2xl rounded-2xl p-12">
+
 
             {/* Logo */}
 
@@ -251,6 +323,8 @@ export default function Login() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
 
+              {/* Name */}
+
               {!isLogin && (
 
                 <div>
@@ -271,8 +345,8 @@ export default function Login() {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 bg-white/30 border border-white/40 rounded-lg text-white placeholder-white/70"
                       placeholder="Enter your name"
+                      className="w-full pl-10 pr-4 py-3 bg-white/30 border border-white/40 rounded-lg text-white placeholder-white/70"
                     />
 
                   </div>
@@ -302,9 +376,9 @@ export default function Login() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-white/30 border border-white/40 rounded-lg text-white placeholder-white/70"
-                    placeholder="Enter your email"
                     required
+                    placeholder="Enter your email"
+                    className="w-full pl-10 pr-4 py-3 bg-white/30 border border-white/40 rounded-lg text-white placeholder-white/70"
                   />
 
                 </div>
@@ -317,7 +391,7 @@ export default function Login() {
               <div>
 
                 <label className="text-sm mb-2 block text-white">
-                  Password
+                  {isLogin ? "Password" : "Create Password"}
                 </label>
 
                 <div className="relative">
@@ -332,9 +406,9 @@ export default function Login() {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-10 py-3 bg-white/30 border border-white/40 rounded-lg text-white placeholder-white/70"
-                    placeholder="Enter password"
                     required
+                    placeholder="Enter password"
+                    className="w-full pl-10 pr-10 py-3 bg-white/30 border border-white/40 rounded-lg text-white placeholder-white/70"
                   />
 
                   <button
@@ -356,6 +430,41 @@ export default function Login() {
               </div>
 
 
+              {/* Confirm Password */}
+
+              {!isLogin && (
+
+                <div>
+
+                  <label className="text-sm mb-2 block text-white">
+                    Confirm Password
+                  </label>
+
+                  <div className="relative">
+
+                    <Lock
+                      size={18}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70"
+                    />
+
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="Confirm password"
+                      className="w-full pl-10 pr-4 py-3 bg-white/30 border border-white/40 rounded-lg text-white placeholder-white/70"
+                    />
+
+                  </div>
+
+                </div>
+
+              )}
+
+
+              {/* Error */}
+
               {error && (
                 <p className="text-red-300 text-sm">{error}</p>
               )}
@@ -370,12 +479,31 @@ export default function Login() {
               >
 
                 {loading
-                  ? "Logging in..."
+                  ? "Processing..."
                   : isLogin
                   ? "Login"
                   : "Create Account"}
 
               </button>
+
+
+              {/* Google Login */}
+
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full py-3 rounded-lg bg-white text-black flex items-center justify-center gap-3 hover:bg-gray-100"
+              >
+
+                <img
+                  src="https://developers.google.com/identity/images/g-logo.png"
+                  className="w-5"
+                />
+
+                Continue with Google
+
+              </button>
+
 
             </form>
 

@@ -64,7 +64,7 @@ export default function ProductPage() {
             />
           </div>
 
-          {/* Info */}
+          {/* Product Info */}
 
           <div>
 
@@ -114,7 +114,7 @@ export default function ProductPage() {
                     price: product.price,
                     image: product.image,
                     category: product.category,
-                    quantity,
+                    quantity: quantity,
                   })
                 }
                 className="flex-1 py-3 bg-primary text-white rounded-lg flex items-center justify-center gap-2"
@@ -142,7 +142,7 @@ export default function ProductPage() {
 
         </div>
 
-        {/* Related */}
+        {/* Related Products */}
 
         {relatedProducts.length > 0 && (
 

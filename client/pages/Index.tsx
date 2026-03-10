@@ -16,11 +16,10 @@ import {
 } from "lucide-react";
 
 import { useCart } from "@/context/CartContext";
-import { products as allProducts } from "@/data/products";
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 
+const API_URL = "https://sbc-backend-u2sm.onrender.com";
 
-/* -------------------- PRODUCT CARD (PREMIUM) -------------------- */
 
 function ProductCard({ product }: { product: any }) {
 
@@ -30,7 +29,7 @@ function ProductCard({ product }: { product: any }) {
     e.preventDefault();
 
     addToCart({
-      id: product.id,
+      id: product._id || product.id,
       name: product.name,
       price: product.price,
       image: product.image,
@@ -45,11 +44,9 @@ function ProductCard({ product }: { product: any }) {
 
     <div className="group snap-start min-w-[300px] max-w-[300px] relative rounded-3xl overflow-hidden border border-[#d8c4a3] bg-gradient-to-b from-[#6e563a] to-[#d4af78] shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
 
-      {/* IMAGE BOX */}
-
       <div className="relative p-4">
 
-        <Link to={`/product/${product.id}`}>
+        <Link to={`/product/${product._id || product.id}`}>
 
           <div className="relative h-60 rounded-xl overflow-hidden border border-[#e6dccf] bg-[#f9f4ec]">
 
@@ -61,9 +58,6 @@ function ProductCard({ product }: { product: any }) {
           </div>
 
         </Link>
-
-
-        {/* DISCOUNT BADGE */}
 
         {product.originalPrice && (
 
@@ -83,12 +77,9 @@ function ProductCard({ product }: { product: any }) {
 
       </div>
 
-
-      {/* PRODUCT DETAILS */}
-
       <div className="px-5 pb-6 text-center">
 
-        <Link to={`/product/${product.id}`}>
+        <Link to={`/product/${product._id || product.id}`}>
 
           <h3 className="font-serif text-lg font-semibold mb-2 text-white hover:text-[#fff2cc] transition line-clamp-2">
             {product.name}
@@ -96,15 +87,9 @@ function ProductCard({ product }: { product: any }) {
 
         </Link>
 
-
-        {/* rating */}
-
         <div className="text-yellow-300 text-sm mb-2">
           {"★".repeat(Math.round(product.rating || 4))}
         </div>
-
-
-        {/* price */}
 
         <div className="flex justify-center items-center gap-2 mb-4">
 
@@ -122,13 +107,10 @@ function ProductCard({ product }: { product: any }) {
 
         </div>
 
-
-        {/* buttons */}
-
         <div className="flex gap-2">
 
           <Link
-            to={`/product/${product.id}`}
+            to={`/product/${product._id || product.id}`}
             className="flex-1 py-2 border border-[#f3e1b8] text-white rounded-lg text-sm hover:bg-white hover:text-[#6e563b] transition"
           >
             View
@@ -151,8 +133,6 @@ function ProductCard({ product }: { product: any }) {
   );
 }
 
-
-/* -------------------- FEATURE CARD -------------------- */
 
 function FeatureCard({ image, title, description }: any) {
 
@@ -188,21 +168,35 @@ function FeatureCard({ image, title, description }: any) {
 }
 
 
-
-/* -------------------- MAIN PAGE -------------------- */
-
 export default function Index() {
 
-  const dressProducts = allProducts.filter(
-    (p) => p.category === "kanha-ji-dresses"
-  );
-
-  const sareeProducts = allProducts.filter(
-    (p) => p.category === "sarees"
-  );
+  const [products,setProducts] = useState<any[]>([]);
 
   const dressSlider = useRef<HTMLDivElement>(null);
   const sareeSlider = useRef<HTMLDivElement>(null);
+
+
+  useEffect(()=>{
+
+    fetch(`${API_URL}/products`)
+      .then(res=>res.json())
+      .then(data=>{
+        setProducts(data);
+      })
+      .catch(err=>{
+        console.error("Error fetching products",err);
+      });
+
+  },[]);
+
+
+  const dressProducts = products.filter(
+    (p) => p.category === "kanha-ji-dresses"
+  );
+
+  const sareeProducts = products.filter(
+    (p) => p.category === "sarees"
+  );
 
 
   const scrollLeft = (sliderRef: any) => {
@@ -239,8 +233,6 @@ export default function Index() {
 
       <Header />
 
-
-{/* HERO */}
 
 <section className="relative py-20 overflow-hidden bg-[radial-gradient(circle_at_top,#fff6ea,#fcf6ed,#f3e6d3)]">
 
@@ -291,8 +283,6 @@ Explore Sarees
 </section>
 
 
-{/* ABOUT */}
-
 <section className="py-24 bg-[#fcf6ed]">
 
 <div className="max-w-6xl mx-auto px-6 text-center">
@@ -300,9 +290,11 @@ Explore Sarees
 <h2 className="text-4xl font-serif font-bold mb-8">
 About SBC by Shwetaa
 </h2>
+
 <p className="mb-16">
   We celebrate timeless tradition and modern elegance through thoughtfully crafted creations at SBC by Shwetaa.
 </p>
+
 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-12">
 
 <FeatureCard
@@ -330,9 +322,6 @@ description="Safe and secure delivery to your doorstep"
 </section>
 
 
-
-{/* KANHA JI SLIDER */}
-
 <section className="py-24">
 
 <div className="max-w-7xl mx-auto px-6">
@@ -350,35 +339,11 @@ Premium handcrafted dresses for Lord Krishna
 </div>
 
 
-<div className="relative">
-
-<button
-onClick={()=>scrollLeft(dressSlider)}
-className="absolute left-2 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-full p-3 hover:bg-primary hover:text-white transition z-10"
->
-<ChevronLeft/>
-</button>
-
-
-<div
-ref={dressSlider}
-className="flex gap-8 overflow-x-auto scroll-smooth snap-x snap-mandatory px-12 py-4 no-scrollbar"
-style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
->
+<div className="flex gap-8 overflow-x-auto px-6">
 
 {dressProducts.map((product)=>(
-<ProductCard key={product.id} product={product}/>
+<ProductCard key={product._id || product.id} product={product}/>
 ))}
-
-</div>
-
-
-<button
-onClick={()=>scrollRight(dressSlider)}
-className="absolute right-2 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-full p-3 hover:bg-primary hover:text-white transition z-10"
->
-<ChevronRight/>
-</button>
 
 </div>
 
@@ -386,9 +351,6 @@ className="absolute right-2 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-
 
 </section>
 
-
-
-{/* SAREE SLIDER */}
 
 <section className="py-24 bg-white">
 
@@ -407,35 +369,11 @@ Traditional and modern sarees crafted with premium silk
 </div>
 
 
-<div className="relative">
-
-<button
-onClick={()=>scrollLeft(sareeSlider)}
-className="absolute left-2 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-full p-3 hover:bg-primary hover:text-white transition z-10"
->
-<ChevronLeft/>
-</button>
-
-
-<div
-ref={sareeSlider}
-className="flex gap-8 overflow-x-auto scroll-smooth snap-x snap-mandatory px-12 py-4 no-scrollbar"
-style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
->
+<div className="flex gap-8 overflow-x-auto px-6">
 
 {sareeProducts.map((product)=>(
-<ProductCard key={product.id} product={product}/>
+<ProductCard key={product._id || product.id} product={product}/>
 ))}
-
-</div>
-
-
-<button
-onClick={()=>scrollRight(sareeSlider)}
-className="absolute right-2 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-full p-3 hover:bg-primary hover:text-white transition z-10"
->
-<ChevronRight/>
-</button>
 
 </div>
 
@@ -443,9 +381,6 @@ className="absolute right-2 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-
 
 </section>
 
-
-
-{/* PAYMENT */}
 
 <section
 className="py-24 text-white relative"

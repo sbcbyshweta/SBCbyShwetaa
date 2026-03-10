@@ -1,654 +1,456 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import AIImageGenerator from "@/components/AIImageGenerator";
-import { products as initialProducts } from "@/data/products";
-import { Plus, Edit2, Trash2, Eye, ChevronDown, ChevronUp, X, Check } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+
+const API_BASE = "https://sbc-backend-u2sm.onrender.com/api";
+const IMAGE_BASE = "https://sbc-backend-u2sm.onrender.com/uploads";
+
+/* ================= PRODUCT TYPE ================= */
 
 interface Product {
-  id: number;
+  _id: string;
   name: string;
   price: number;
-  originalPrice?: number;
-  image: string;
-  category: "kanha-ji-dresses" | "sarees" | "other-products";
   description: string;
+  category: "kanha-ji-dresses" | "sarees" | "other-products";
+  image: string;
   rating: number;
-  reviews: number;
-  inStock: boolean;
-  sku: string;
+  stock: number;
+
+  id?: string;
+  sku?: string;
   colors?: string[];
   sizes?: string[];
+  reviews?: number;
+  originalPrice?: number;
+  inStock?: boolean;
 }
 
+/* ================= CATEGORY LABELS ================= */
+
+const categoryLabels: Record<string, string> = {
+  "kanha-ji-dresses": "Kanha Ji Dresses",
+  "sarees": "Sarees",
+  "other-products": "Other Products",
+};
+
+/* ================= PRICE FORMAT ================= */
+
+const formatPrice = (price: number) => {
+  return `₹${price.toLocaleString("en-IN")}`;
+};
+
 export default function AdminPanel() {
+
   const navigate = useNavigate();
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterCategory, setFilterCategory] = useState("all");
+
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<Partial<Product>>({
+  const [formData, setFormData] = useState<{
+    name: string;
+    price: number;
+    description: string;
+    category: "kanha-ji-dresses" | "sarees" | "other-products";
+  }>({
     name: "",
     price: 0,
-    originalPrice: 0,
-    image: "",
-    category: "kanha-ji-dresses",
     description: "",
-    rating: 4.5,
-    reviews: 0,
-    inStock: true,
-    sku: "",
-    colors: [],
-    sizes: [],
+    category: "kanha-ji-dresses",
   });
 
-  const [colorInput, setColorInput] = useState("");
-  const [sizeInput, setSizeInput] = useState("");
+  /* ================= FETCH PRODUCTS ================= */
 
-  // Filter and search products
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/products`);
+      const data = await res.json();
+
+      const normalized = data.map((p: any) => ({
+        ...p,
+        id: p._id,
+        reviews: p.reviews ?? Math.floor(Math.random() * 150),
+        colors: p.colors ?? ["Default"],
+        sizes: p.sizes ?? ["Free Size"],
+        originalPrice: p.originalPrice ?? p.price,
+        inStock: p.stock > 0,
+      }));
+
+      setProducts(normalized);
+
+    } catch (error) {
+      console.error("Fetch products error:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  /* ================= FILTER PRODUCTS ================= */
+
   const filteredProducts = products.filter((product) => {
+
     const matchesSearch = product.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
+
     const matchesCategory =
       filterCategory === "all" || product.category === filterCategory;
+
     return matchesSearch && matchesCategory;
   });
 
-  const handleAddProduct = () => {
-    if (!formData.name || !formData.price || !formData.sku) {
-      alert("Please fill in all required fields");
+  /* ================= ADD PRODUCT ================= */
+
+  const handleAddProduct = async () => {
+
+    const token = localStorage.getItem("token");
+
+    if (!formData.name || !formData.price) {
+      alert("Please fill required fields");
       return;
     }
 
-    if (editingId) {
-      // Update existing product
-      setProducts(
-        products.map((p) =>
-          p.id === editingId ? { ...formData, id: editingId } : p
-        ) as Product[]
-      );
-      setEditingId(null);
-    } else {
-      // Add new product
-      const newProduct: Product = {
-        ...formData,
-        id: Math.max(...products.map((p) => p.id), 0) + 1,
-      } as Product;
-      setProducts([...products, newProduct]);
-    }
+    try {
 
-    resetForm();
-    setShowAddForm(false);
+      const form = new FormData();
+
+      form.append("name", formData.name);
+      form.append("price", String(formData.price));
+      form.append("description", formData.description);
+      form.append("category", formData.category);
+      form.append("rating", "5");
+      form.append("stock", "10");
+
+      if (generatedImage) {
+        form.append("image", generatedImage);
+      }
+
+      await fetch(`${API_BASE}/products`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      });
+
+      fetchProducts();
+      resetForm();
+      setShowAddForm(false);
+
+    } catch (error) {
+      console.error("Add product error:", error);
+    }
   };
 
+  /* ================= DELETE PRODUCT ================= */
+
+  const handleDeleteProduct = async (id: string) => {
+
+    const token = localStorage.getItem("token");
+
+    if (!window.confirm("Delete this product?")) return;
+
+    try {
+
+      await fetch(`${API_BASE}/products/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      fetchProducts();
+
+    } catch (error) {
+      console.error("Delete error:", error);
+    }
+  };
+
+  /* ================= RESET FORM ================= */
+
   const resetForm = () => {
+
     setFormData({
       name: "",
       price: 0,
-      originalPrice: 0,
-      image: "",
-      category: "kanha-ji-dresses",
       description: "",
-      rating: 4.5,
-      reviews: 0,
-      inStock: true,
-      sku: "",
-      colors: [],
-      sizes: [],
+      category: "kanha-ji-dresses",
     });
-    setColorInput("");
-    setSizeInput("");
+
     setGeneratedImage(null);
   };
 
-  const handleDeleteProduct = (id: number) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      setProducts(products.filter((p) => p.id !== id));
-    }
-  };
+  /* ================= ADMIN AUTH ================= */
 
-  const handleEditProduct = (product: Product) => {
-    setFormData(product);
-    setEditingId(product.id);
-    setShowAddForm(true);
-    setGeneratedImage(product.image);
-  };
+  const isAdmin = localStorage.getItem("token");
 
-  const handleImageGenerated = (imageUrl: string) => {
-    setFormData({ ...formData, image: imageUrl });
-    setGeneratedImage(imageUrl);
-  };
-
-  const handleAddColor = () => {
-    if (colorInput.trim()) {
-      setFormData({
-        ...formData,
-        colors: [...(formData.colors || []), colorInput],
-      });
-      setColorInput("");
-    }
-  };
-
-  const handleRemoveColor = (color: string) => {
-    setFormData({
-      ...formData,
-      colors: formData.colors?.filter((c) => c !== color),
-    });
-  };
-
-  const handleAddSize = () => {
-    if (sizeInput.trim()) {
-      setFormData({
-        ...formData,
-        sizes: [...(formData.sizes || []), sizeInput],
-      });
-      setSizeInput("");
-    }
-  };
-
-  const handleRemoveSize = (size: string) => {
-    setFormData({
-      ...formData,
-      sizes: formData.sizes?.filter((s) => s !== size),
-    });
-  };
-
-  // Check if user is authenticated as admin
-  const isAdmin = localStorage.getItem("adminUser");
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center">
-            <h2 className="heading-sm text-foreground mb-4">Access Denied</h2>
-            <p className="text-muted-foreground mb-8">
-              You need admin credentials to access this panel.
-            </p>
-            <button
-              onClick={() => navigate("/login")}
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-all"
-            >
-              Login as Admin
-            </button>
-          </div>
+
+        <div className="max-w-7xl mx-auto py-16 text-center">
+
+          <h2 className="text-xl font-semibold mb-4">
+            Access Denied
+          </h2>
+
+          <button
+            onClick={() => navigate("/login")}
+            className="px-6 py-3 bg-primary text-white rounded-full"
+          >
+            Login as Admin
+          </button>
+
         </div>
       </div>
     );
   }
 
+  /* ================= UI ================= */
+
   return (
     <div className="min-h-screen bg-background">
+
       <Header />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="heading-md text-foreground mb-2">Admin Panel</h1>
-          <p className="text-muted-foreground">
-            Manage products, generate AI images, and control your e-commerce store
-          </p>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+
+        <h1 className="text-2xl font-bold mb-6">
+          Admin Panel
+        </h1>
+
+        {/* CONTROLS */}
+
+        <div className="flex gap-3 mb-6">
+
+          <input
+            type="text"
+            placeholder="Search products"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border px-3 py-2 rounded"
+          />
+
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="border px-3 py-2 rounded"
+          >
+            <option value="all">All</option>
+            <option value="kanha-ji-dresses">Kanha Dresses</option>
+            <option value="sarees">Sarees</option>
+            <option value="other-products">Other Products</option>
+          </select>
+
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded"
+          >
+            <Plus size={16} />
+            Add Product
+          </button>
+
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg border border-border p-6">
-            <p className="text-sm text-muted-foreground mb-2">Total Products</p>
-            <p className="text-3xl font-bold text-primary">{products.length}</p>
-          </div>
-          <div className="bg-white rounded-lg border border-border p-6">
-            <p className="text-sm text-muted-foreground mb-2">In Stock</p>
-            <p className="text-3xl font-bold text-green-600">
-              {products.filter((p) => p.inStock).length}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg border border-border p-6">
-            <p className="text-sm text-muted-foreground mb-2">Total Revenue</p>
-            <p className="text-3xl font-bold text-primary">
-              ₹{products
-                .reduce((sum, p) => sum + p.price * 10, 0)
-                .toLocaleString()}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg border border-border p-6">
-            <p className="text-sm text-muted-foreground mb-2">Categories</p>
-            <p className="text-3xl font-bold text-primary">3</p>
-          </div>
-        </div>
+        {/* PRODUCT LIST */}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Product List */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg border border-border overflow-hidden">
-              {/* Controls */}
-              <div className="p-6 border-b border-border space-y-4">
-                <div className="flex justify-between items-center">
-                  <h2 className="font-semibold text-lg text-foreground">
-                    Products
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowAddForm(true);
-                      setEditingId(null);
-                      resetForm();
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
-                  >
-                    <Plus size={18} />
-                    Add Product
-                  </button>
-                </div>
+        <div className="bg-white border rounded-lg overflow-hidden">
 
-                {/* Filters */}
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                  />
-                  <select
-                    value={filterCategory}
-                    onChange={(e) => setFilterCategory(e.target.value)}
-                    className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="kanha-ji-dresses">Kanha Ji Dresses</option>
-                    <option value="sarees">Sarees</option>
-                    <option value="other-products">Other Products</option>
-                  </select>
-                </div>
+          {filteredProducts.map((product) => (
+
+            <div
+              key={product._id}
+              className="flex items-center gap-4 p-4 border-b"
+            >
+
+              <img
+                src={`${IMAGE_BASE}/${product.image}`}
+                className="w-16 h-16 object-cover rounded"
+              />
+
+              <div className="flex-1">
+
+                <h3 className="font-medium">
+                  {product.name}
+                </h3>
+
+                <p className="text-sm text-gray-500">
+                  {formatPrice(product.price)}
+                </p>
+
+                <p className="text-xs text-gray-400">
+                  {categoryLabels[product.category]}
+                </p>
+
+                <p className="text-xs">
+                  {"★".repeat(Math.round(product.rating || 4))}
+                  ({product.reviews})
+                </p>
+
               </div>
 
-              {/* Product List */}
-              <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className="p-4 hover:bg-secondary/30 transition-colors"
-                    >
-                      <div className="flex gap-4 items-start">
-                        {/* Product Image */}
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-                        />
+              <div className="flex gap-3">
 
-                        {/* Product Info */}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-foreground line-clamp-1">
-                            {product.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {product.sku} • ₹{product.price.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {product.inStock ? (
-                              <span className="text-green-600 flex items-center gap-1">
-                                <Check size={14} />
-                                In Stock
-                              </span>
-                            ) : (
-                              <span className="text-red-600 flex items-center gap-1">
-                                <X size={14} />
-                                Out of Stock
-                              </span>
-                            )}
-                          </p>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-1 flex-shrink-0">
-                          <button
-                            onClick={() =>
-                              setExpandedId(
-                                expandedId === product.id ? null : product.id
-                              )
-                            }
-                            className="p-2 text-muted-foreground hover:bg-secondary rounded transition-colors"
-                          >
-                            {expandedId === product.id ? (
-                              <ChevronUp size={18} />
-                            ) : (
-                              <ChevronDown size={18} />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleEditProduct(product)}
-                            className="p-2 text-primary hover:bg-secondary rounded transition-colors"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProduct(product.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Expanded Details */}
-                      {expandedId === product.id && (
-                        <div className="mt-4 pt-4 border-t border-border text-sm space-y-2">
-                          <p className="text-muted-foreground line-clamp-2">
-                            {product.description}
-                          </p>
-                          {product.colors && product.colors.length > 0 && (
-                            <p className="text-muted-foreground">
-                              <strong>Colors:</strong> {product.colors.join(", ")}
-                            </p>
-                          )}
-                          {product.sizes && product.sizes.length > 0 && (
-                            <p className="text-muted-foreground">
-                              <strong>Sizes:</strong> {product.sizes.join(", ")}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No products found
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Add/Edit Product Form */}
-          {showAddForm && (
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg border border-border p-6 sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="font-semibold text-lg text-foreground">
-                    {editingId ? "Edit Product" : "Add New Product"}
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowAddForm(false);
-                      resetForm();
-                    }}
-                    className="p-1 hover:bg-secondary rounded"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {/* AI Image Generator */}
-                  <div className="mb-6 pb-6 border-b border-border">
-                    <AIImageGenerator
-                      category={
-                        (formData.category as
-                          | "kanha-ji-dresses"
-                          | "sarees"
-                          | "other-products") || "kanha-ji-dresses"
-                      }
-                      description={formData.description || ""}
-                      size={formData.sizes?.[0]}
-                      onImageGenerated={handleImageGenerated}
-                    />
-                  </div>
-
-                  {/* Or use uploaded image */}
-                  {generatedImage && (
-                    <div>
-                      <img
-                        src={generatedImage}
-                        alt="Product"
-                        className="w-full h-32 object-cover rounded-lg mb-3"
-                      />
-                    </div>
+                <button
+                  onClick={() =>
+                    setExpandedId(
+                      expandedId === product._id ? null : product._id
+                    )
+                  }
+                >
+                  {expandedId === product._id ? (
+                    <ChevronUp size={18} />
+                  ) : (
+                    <ChevronDown size={18} />
                   )}
+                </button>
 
-                  {/* Product Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Product Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      placeholder="Enter product name"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                    />
-                  </div>
+                <button
+                  onClick={() => handleDeleteProduct(product._id)}
+                  className="text-red-500"
+                >
+                  <Trash2 size={18} />
+                </button>
 
-                  {/* Category */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Category *
-                    </label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          category: e.target.value as any,
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                    >
-                      <option value="kanha-ji-dresses">Kanha Ji Dresses</option>
-                      <option value="sarees">Sarees</option>
-                      <option value="other-products">Other Products</option>
-                    </select>
-                  </div>
-
-                  {/* Price */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">
-                        Price (₹) *
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.price || 0}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            price: Number(e.target.value),
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">
-                        Original Price (₹)
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.originalPrice || 0}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            originalPrice: Number(e.target.value),
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {/* SKU */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      SKU *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.sku || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, sku: e.target.value })
-                      }
-                      placeholder="e.g., SKU-001"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                    />
-                  </div>
-
-                  {/* Description */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      value={formData.description || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          description: e.target.value,
-                        })
-                      }
-                      placeholder="Describe the product..."
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm resize-none"
-                      rows={3}
-                    />
-                  </div>
-
-                  {/* Colors */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Colors
-                    </label>
-                    <div className="flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={colorInput}
-                        onChange={(e) => setColorInput(e.target.value)}
-                        placeholder="Add a color"
-                        className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") {
-                            handleAddColor();
-                            e.preventDefault();
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={handleAddColor}
-                        className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
-                      >
-                        Add
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.colors?.map((color) => (
-                        <span
-                          key={color}
-                          className="inline-flex items-center gap-2 px-2 py-1 bg-secondary rounded text-sm"
-                        >
-                          {color}
-                          <button
-                            onClick={() => handleRemoveColor(color)}
-                            className="text-foreground hover:text-red-600 transition-colors"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sizes */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Sizes
-                    </label>
-                    <div className="flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={sizeInput}
-                        onChange={(e) => setSizeInput(e.target.value)}
-                        placeholder="Add a size"
-                        className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") {
-                            handleAddSize();
-                            e.preventDefault();
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={handleAddSize}
-                        className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
-                      >
-                        Add
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.sizes?.map((size) => (
-                        <span
-                          key={size}
-                          className="inline-flex items-center gap-2 px-2 py-1 bg-secondary rounded text-sm"
-                        >
-                          {size}
-                          <button
-                            onClick={() => handleRemoveSize(size)}
-                            className="text-foreground hover:text-red-600 transition-colors"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* In Stock */}
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <input
-                        type="checkbox"
-                        checked={formData.inStock || false}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            inStock: e.target.checked,
-                          })
-                        }
-                        className="rounded"
-                      />
-                      In Stock
-                    </label>
-                  </div>
-
-                  {/* Buttons */}
-                  <div className="flex gap-2 pt-4 border-t border-border">
-                    <button
-                      onClick={handleAddProduct}
-                      className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
-                    >
-                      {editingId ? "Update" : "Add"} Product
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowAddForm(false);
-                        resetForm();
-                      }}
-                      className="flex-1 py-2 border border-border rounded-lg hover:bg-secondary transition-colors font-medium text-sm"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
               </div>
+
             </div>
-          )}
+
+          ))}
+
         </div>
+
+        {/* ADD PRODUCT FORM */}
+
+        {showAddForm && (
+
+          <div className="mt-8 border rounded-lg p-6 bg-white">
+
+            <h2 className="text-lg font-semibold mb-4">
+              Add Product
+            </h2>
+
+            <div className="space-y-4">
+
+              {/* NAME */}
+
+              <input
+                type="text"
+                placeholder="Product name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    name: e.target.value,
+                  })
+                }
+                className="w-full border px-3 py-2 rounded"
+              />
+
+              {/* PRICE */}
+
+              <input
+                type="number"
+                placeholder="Price"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    price: Number(e.target.value),
+                  })
+                }
+                className="w-full border px-3 py-2 rounded"
+              />
+
+              {/* DESCRIPTION */}
+
+              <textarea
+                placeholder="Description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    description: e.target.value,
+                  })
+                }
+                className="w-full border px-3 py-2 rounded"
+              />
+
+              {/* CATEGORY SELECT */}
+
+              <div>
+
+                <label className="text-sm font-medium">
+                  Category
+                </label>
+
+                <select
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      category: e.target.value as
+                        | "kanha-ji-dresses"
+                        | "sarees"
+                        | "other-products",
+                    })
+                  }
+                  className="w-full border px-3 py-2 rounded mt-1"
+                >
+                  <option value="kanha-ji-dresses">
+                    Kanha Ji Dresses
+                  </option>
+
+                  <option value="sarees">
+                    Sarees
+                  </option>
+
+                  <option value="other-products">
+                    Other Products
+                  </option>
+
+                </select>
+
+              </div>
+
+              {/* AI IMAGE */}
+
+              <AIImageGenerator
+                category={formData.category}
+                description={formData.description}
+                onImageGenerated={(img) =>
+                  setGeneratedImage(img)
+                }
+              />
+
+              {/* ADD BUTTON */}
+
+              <button
+                onClick={handleAddProduct}
+                className="bg-primary text-white px-6 py-2 rounded"
+              >
+                Add Product
+              </button>
+
+            </div>
+
+          </div>
+
+        )}
+
       </div>
+
     </div>
   );
 }
