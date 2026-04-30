@@ -6,6 +6,7 @@ import {
   getOrderById,
   updateOrderStatus,
   deleteOrder,
+  cancelOrder,
 } from "../controllers/orderController";
 
 import { authMiddleware } from "../middleware/authMiddleware";
@@ -25,5 +26,7 @@ router.put("/:id", authMiddleware, updateOrderStatus);
 router.delete("/:id", authMiddleware, deleteOrder);
 
 router.put("/:id/status", authMiddleware, updateOrderStatus);
+
+router.put("/cancel/:id", cancelOrder);
 
 export default router;

@@ -182,3 +182,46 @@ export const deleteOrder = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Delete failed" });
   }
 };
+
+export const cancelOrder = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.body;
+
+    console.log("=== CANCEL ORDER ===");
+    console.log("Order ID:", id, "Email:", email);
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.email !== email) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to cancel this order" });
+    }
+
+    if (order.status !== "pending") {
+      return res.status(400).json({
+        message: "Order can only be cancelled before confirmation",
+      });
+    }
+
+    order.status = "cancelled";
+    await order.save();
+
+    console.log("Order cancelled:", id);
+    res.json({
+      message: "Order cancelled successfully",
+      order,
+    });
+  } catch (error: any) {
+    console.error("CANCEL ORDER ERROR:", error);
+    res.status(500).json({
+      message: "Failed to cancel order",
+      error: error.message,
+    });
+  }
+};

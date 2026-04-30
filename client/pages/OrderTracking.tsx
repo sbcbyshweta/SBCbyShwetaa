@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Copy,
   Check,
+  XCircle,
 } from "lucide-react";
 
 interface OrderProduct {
@@ -136,6 +137,38 @@ export default function OrderTracking() {
       console.error("Error fetching orders:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const cancelOrder = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+
+    const email = localStorage.getItem("customerEmail");
+    if (!email) return;
+
+    try {
+      const res = await fetch(`${API_URL}/orders/cancel/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Order cancelled successfully");
+        const updatedOrders = orders.map((o) =>
+          o._id === orderId ? { ...o, status: "cancelled" } : o,
+        );
+        setOrders(updatedOrders);
+        if (selectedOrder?._id === orderId) {
+          setSelectedOrder({ ...selectedOrder, status: "cancelled" });
+        }
+      } else {
+        alert(data.message || "Failed to cancel order");
+      }
+    } catch {
+      alert("Error cancelling order");
     }
   };
 
@@ -361,6 +394,26 @@ export default function OrderTracking() {
             </div>
           </div>
         </div>
+
+        {/* Cancel Order Button */}
+        {selectedOrder.status === "pending" && (
+          <div className="bg-white rounded-2xl p-6 mb-6 border border-red-200">
+            <div className="flex items-center gap-3 mb-3">
+              <XCircle size={20} className="text-red-500" />
+              <h3 className="font-semibold text-gray-900">Cancel Order</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              You can cancel this order before it is confirmed by the seller.
+            </p>
+            <button
+              onClick={() => cancelOrder(selectedOrder._id)}
+              className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-medium text-sm hover:bg-red-600 transition-all duration-300 flex items-center gap-2"
+            >
+              <XCircle size={16} />
+              Cancel This Order
+            </button>
+          </div>
+        )}
 
         {/* Progress Steps */}
         {selectedOrder.status !== "cancelled" && (
