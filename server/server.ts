@@ -51,14 +51,6 @@ export function createServer() {
 
   app.use("/api", limiter);
 
-  const orderLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    message: { message: "Too many orders, please try again later" },
-  });
-
-  app.use("/api/orders", orderLimiter);
-
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
