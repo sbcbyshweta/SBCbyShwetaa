@@ -185,38 +185,6 @@ export default function OrderTracking() {
     }
   };
 
-  const cancelOrder = async (orderId: string) => {
-    if (!window.confirm("Are you sure you want to cancel this order?")) return;
-
-    const email = localStorage.getItem("customerEmail");
-    if (!email) return;
-
-    try {
-      const res = await fetch(`${API_URL}/orders/cancel/${orderId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert("Order cancelled successfully");
-        const updatedOrders = orders.map((o) =>
-          o._id === orderId ? { ...o, status: "cancelled" } : o,
-        );
-        setOrders(updatedOrders);
-        if (selectedOrder?._id === orderId) {
-          setSelectedOrder({ ...selectedOrder, status: "cancelled" });
-        }
-      } else {
-        alert(data.message || "Failed to cancel order");
-      }
-    } catch {
-      alert("Error cancelling order");
-    }
-  };
-
   const copyOrderId = () => {
     if (selectedOrder) {
       navigator.clipboard.writeText(selectedOrder._id);
