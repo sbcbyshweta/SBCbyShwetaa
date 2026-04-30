@@ -114,29 +114,74 @@ export default function OrderTracking() {
     fetchOrders(email);
     const interval = setInterval(() => fetchOrders(email), 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (orders.length > 0 && orderId) {
       const found = orders.find((o) => o._id === orderId);
       if (found) setSelectedOrder(found);
     }
+    if (orders.length > 0 && !selectedOrder && !orderId) {
+      setSelectedOrder(orders[0]);
+    }
   }, [orders, orderId]);
 
   const fetchOrders = async (email: string) => {
     try {
       const res = await fetch(`${API_URL}/orders/my?email=${email}`);
+
+      if (!res.ok) {
+        console.error("Failed to fetch orders, status:", res.status);
+        return;
+      }
+
       const data = await res.json();
-      if (Array.isArray(data)) {
-        setOrders(data);
-        if (!selectedOrder && data.length > 0 && !orderId) {
-          setSelectedOrder(data[0]);
+
+      if (!Array.isArray(data)) {
+        console.error("Expected array but got:", data);
+        return;
+      }
+
+      setOrders(data);
+
+      if (selectedOrder) {
+        const updated = data.find((o) => o._id === selectedOrder._id);
+        if (updated) {
+          setSelectedOrder(updated);
         }
+      } else if (data.length > 0 && !orderId) {
+        setSelectedOrder(data[0]);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const cancelOrder = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+
+    const email = localStorage.getItem("customerEmail");
+    if (!email) return;
+
+    try {
+      const res = await fetch(`${API_URL}/orders/cancel/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Order cancelled successfully");
+        fetchOrders(email);
+      } else {
+        alert(data.message || "Failed to cancel order");
+      }
+    } catch {
+      alert("Error cancelling order");
     }
   };
 
