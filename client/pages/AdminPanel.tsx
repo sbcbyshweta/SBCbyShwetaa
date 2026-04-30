@@ -383,6 +383,7 @@ export default function AdminPanel() {
         console.log("Using URL:", formData.imageUrl);
       }
 
+      const token = localStorage.getItem("token");
       const url = editingProduct
         ? `${API_URL}/products/${editingProduct._id}`
         : `${API_URL}/products`;
@@ -391,6 +392,9 @@ export default function AdminPanel() {
 
       const response = await fetch(url, {
         method: editingProduct ? "PUT" : "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formDataObj,
       });
 
@@ -422,8 +426,12 @@ export default function AdminPanel() {
 
     try {
       setIsLoading(true);
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/products/${id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {
@@ -445,9 +453,15 @@ export default function AdminPanel() {
 
     try {
       setIsLoading(true);
+      const token = localStorage.getItem("token");
       await Promise.all(
         selectedProducts.map((id) =>
-          fetch(`${API_URL}/products/${id}`, { method: "DELETE" }),
+          fetch(`${API_URL}/products/${id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
         ),
       );
       showNotification(

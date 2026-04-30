@@ -91,8 +91,12 @@ function ProductCard({
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-110 transition duration-700"
               onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&h=600&fit=crop";
+                const target = e.target as HTMLImageElement;
+                if (!target.dataset.fallbackTriggered) {
+                  target.dataset.fallbackTriggered = "true";
+                  target.src =
+                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400' viewBox='0 0 300 400'%3E%3Crect fill='%23e5a186' width='300' height='400'/%3E%3Ctext fill='%23ffffff' font-family='sans-serif' font-size='16' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3ENo Image%3C/text%3E%3C/svg%3E";
+                }
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition duration-300" />

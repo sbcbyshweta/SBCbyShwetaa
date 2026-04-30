@@ -171,8 +171,12 @@ export default function ProductPage() {
                 alt={product.name}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&h=800&fit=crop";
+                  const target = e.target as HTMLImageElement;
+                  if (!target.dataset.fallbackTriggered) {
+                    target.dataset.fallbackTriggered = "true";
+                    target.src =
+                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'%3E%3Crect fill='%23f0e6d6' width='800' height='800'/%3E%3Ctext fill='%23999' font-family='sans-serif' font-size='32' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3ENo Image Available%3C/text%3E%3C/svg%3E";
+                  }
                 }}
               />
               {discount > 0 && (
