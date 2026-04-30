@@ -117,6 +117,22 @@ export default function OrderTracking() {
   }, [navigate]);
 
   useEffect(() => {
+    if (orderId) {
+      fetch(`${API_URL}/orders/my/${orderId}`)
+        .then((res) => {
+          if (!res.ok) return null;
+          return res.json();
+        })
+        .then((data) => {
+          if (data && !data.message && data._id) {
+            setSelectedOrder(data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [orderId]);
+
+  useEffect(() => {
     if (orders.length > 0 && orderId) {
       const found = orders.find((o) => o._id === orderId);
       if (found) setSelectedOrder(found);

@@ -110,6 +110,9 @@ export default function Login() {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      if (data.user?.email) {
+        localStorage.setItem("customerEmail", data.user.email);
+      }
 
       if (data.user?.role === "admin") {
         navigate("/admin");
