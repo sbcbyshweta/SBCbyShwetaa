@@ -389,6 +389,8 @@ export default function AdminPanel() {
         : `${API_URL}/products`;
 
       console.log("Submitting to:", url);
+      console.log("Token:", token ? "present" : "missing");
+      console.log("FormData entries:", Array.from(formDataObj.entries()));
 
       const response = await fetch(url, {
         method: editingProduct ? "PUT" : "POST",
@@ -398,24 +400,27 @@ export default function AdminPanel() {
         body: formDataObj,
       });
 
+      console.log("Response status:", response.status);
       const data = await response.json();
-      console.log("Response:", data);
+      console.log("Response data:", data);
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         showNotification(
           editingProduct ? "Product updated!" : "Product added!",
           "success",
         );
-        fetchProducts();
+        await fetchProducts();
         setShowAddForm(false);
         setEditingProduct(null);
         resetForm();
       } else {
-        showNotification(data.message || "Operation failed", "error");
+        const errorMsg = data.message || data.error || "Operation failed";
+        console.error("Server error:", errorMsg, data);
+        showNotification(errorMsg, "error");
       }
     } catch (error: any) {
       console.error("Submit error:", error);
-      showNotification("Error: " + error.message, "error");
+      showNotification("Network error: " + error.message, "error");
     } finally {
       setIsLoading(false);
     }
