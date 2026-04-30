@@ -1,44 +1,20 @@
-import express from "express"
-
+import express from "express";
 import {
   createProduct,
   getProducts,
   getProductById,
   deleteProduct,
-  updateProduct
-} from "../controllers/productController"
+  updateProduct,
+} from "../controllers/productController";
+import { upload } from "../middleware/uploadMiddleware";
+import { authMiddleware } from "../middleware/authMiddleware";
 
-import { authMiddleware } from "../middleware/authMiddleware"
-import { upload } from "../middleware/uploadMiddleware"
+const router = express.Router();
 
-const router = express.Router()
+router.get("/", getProducts);
+router.get("/:id", getProductById);
+router.post("/", authMiddleware, upload.single("image"), createProduct);
+router.delete("/:id", authMiddleware, deleteProduct);
+router.put("/:id", authMiddleware, upload.single("image"), updateProduct);
 
-// GET ALL PRODUCTS
-router.get("/", getProducts)
-
-// GET SINGLE PRODUCT
-router.get("/:id", getProductById)
-
-// CREATE PRODUCT
-router.post(
-  "/",
-  authMiddleware,
-  upload.single("image"),
-  createProduct
-)
-
-// DELETE PRODUCT
-router.delete(
-  "/:id",
-  authMiddleware,
-  deleteProduct
-)
-
-// UPDATE PRODUCT
-router.put(
-  "/:id",
-  authMiddleware,
-  updateProduct
-)
-
-export default router
+export default router;

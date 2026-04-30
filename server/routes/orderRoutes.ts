@@ -1,23 +1,29 @@
-import express from "express"
+import express from "express";
 import {
-createOrder,
-getOrders,
-updateOrderStatus,
-deleteOrder
-} from "../controllers/orderController"
+  createOrder,
+  getOrders,
+  getMyOrders,
+  getOrderById,
+  updateOrderStatus,
+  deleteOrder,
+} from "../controllers/orderController";
 
-import {authMiddleware} from "../middleware/authMiddleware"
+import { authMiddleware } from "../middleware/authMiddleware";
 
-const router = express.Router()
+const router = express.Router();
 
-router.post("/", createOrder)
+router.post("/", createOrder);
 
-router.get("/", authMiddleware, getOrders)
+router.get("/", authMiddleware, getOrders);
 
-router.put("/:id", authMiddleware, updateOrderStatus)
+router.get("/my", getMyOrders);
 
-router.delete("/:id", authMiddleware, deleteOrder)
+router.get("/my/:id", getOrderById);
 
-router.put("/:id/status",authMiddleware,updateOrderStatus)
+router.put("/:id", authMiddleware, updateOrderStatus);
 
-export default router
+router.delete("/:id", authMiddleware, deleteOrder);
+
+router.put("/:id/status", authMiddleware, updateOrderStatus);
+
+export default router;

@@ -3,8 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 export default defineConfig({
-
-  // frontend folder
   root: path.resolve(__dirname, "client"),
 
   server: {
@@ -15,13 +13,17 @@ export default defineConfig({
         path.resolve(__dirname, "client"),
         path.resolve(__dirname, "shared"),
       ],
-      deny: [
-        ".env",
-        ".env.*",
-        "*.{crt,pem}",
-        "**/.git/**",
-        "server/**"
-      ],
+      deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
+    },
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+      },
+      "/uploads": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+      },
     },
   },
 
@@ -30,9 +32,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
 
-  plugins: [
-    react()
-  ],
+  plugins: [react()],
 
   resolve: {
     alias: {
@@ -40,5 +40,4 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "shared"),
     },
   },
-
 });

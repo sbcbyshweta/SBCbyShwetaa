@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
-import { Menu, X, ShoppingCart, LogOut } from "lucide-react";
+import { Menu, X, ShoppingCart, LogOut, Package } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import logo from "../assets/light_logo.jpg";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const navigate = useNavigate();
 
@@ -13,12 +14,17 @@ export default function Header() {
 
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
 
-  const user = localStorage.getItem("user");
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+  }, []);
 
   const handleLogout = () => {
+    localStorage.removeItem("token");
     localStorage.removeItem("user");
+    setIsLoggedIn(false);
     navigate("/");
-    window.location.reload();
+    setTimeout(() => window.location.reload(), 100);
   };
 
   const navLinkClass =
@@ -29,13 +35,11 @@ export default function Header() {
 
   return (
     <header className="bg-gradient-to-r from-[#fff8ef] via-[#fcf6ed] to-[#f4e8d8] backdrop-blur-sm border-b border-[#e6dccf] sticky top-0 z-50 shadow-md">
-
       {/* silk gloss overlay */}
       <div className="absolute inset-0 bg-gradient-to-r from-white/40 via-white/10 to-white/40 opacity-30 pointer-events-none"></div>
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8 relative">
         <div className="flex justify-between items-center h-20">
-
           {/* LOGO */}
           <Link to="/" className="flex items-center">
             <img
@@ -47,7 +51,6 @@ export default function Header() {
 
           {/* DESKTOP NAVIGATION */}
           <nav className="hidden md:flex items-center gap-8">
-
             <NavLink
               to="/"
               className={({ isActive }) =>
@@ -81,16 +84,14 @@ export default function Header() {
                 `${navLinkClass} ${isActive ? activeClass : "text-gray-700"}`
               }
             >
-               Special Collections
+              Special Collections
             </NavLink>
-
           </nav>
 
           {/* RIGHT SECTION */}
           <div className="flex items-center gap-3">
-
             {/* CART (only after login) */}
-            {user && (
+            {isLoggedIn && (
               <Link
                 to="/cart"
                 className="relative p-2 hover:bg-white/40 rounded-full transition"
@@ -105,8 +106,18 @@ export default function Header() {
               </Link>
             )}
 
+            {/* MY ORDERS */}
+            {isLoggedIn && (
+              <Link
+                to="/my-orders"
+                className="p-2 hover:bg-white/40 rounded-full transition"
+              >
+                <Package size={20} />
+              </Link>
+            )}
+
             {/* LOGIN / LOGOUT */}
-            {!user ? (
+            {!isLoggedIn ? (
               <Link
                 to="/login"
                 className="px-8 py-3 border-2 border-[#e6b980] text-[] bg-gradient-to-r from-[#b88746] via-[#f7d7a8] to-[#b88746] rounded-full font-semibold transition-all hover:shadow-xl hover:scale-105 uppercase tracking-wider text-sm"
@@ -130,14 +141,12 @@ export default function Header() {
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-
           </div>
         </div>
 
         {/* MOBILE MENU */}
         {isMenuOpen && (
           <nav className="md:hidden pb-4 space-y-2 border-t pt-4">
-
             <NavLink
               to="/"
               className="block px-4 py-2"
@@ -170,7 +179,7 @@ export default function Header() {
               Other Products
             </NavLink>
 
-            {user && (
+            {isLoggedIn && (
               <Link
                 to="/cart"
                 className="block px-4 py-2"
@@ -180,9 +189,17 @@ export default function Header() {
               </Link>
             )}
 
+            {isLoggedIn && (
+              <Link
+                to="/my-orders"
+                className="block px-4 py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                My Orders
+              </Link>
+            )}
           </nav>
         )}
-
       </div>
     </header>
   );

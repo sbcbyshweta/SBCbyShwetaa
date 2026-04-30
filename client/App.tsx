@@ -21,7 +21,9 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Dashboard from "./pages/Dashboard";
 import OrderSuccess from "./pages/OrderSuccess";
+import OrderTracking from "./pages/OrderTracking";
 import AdminPanel from "./pages/AdminPanel";
+import Footer from "./components/Footer";
 
 const queryClient = new QueryClient();
 
@@ -35,40 +37,48 @@ const App = () => {
               <Toaster />
               <Sonner />
 
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
+              <div className="min-h-screen flex flex-col">
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
 
-                  <Route path="/login" element={<Login />} />
+                    <Route path="/login" element={<Login />} />
 
-                  <Route
-                    path="/category/:category"
-                    element={<CategoryPage />}
-                  />
+                    <Route
+                      path="/category/:category"
+                      element={<CategoryPage />}
+                    />
 
-                  <Route
-                    path="/product/:productId"
-                    element={<ProductPage />}
-                  />
+                    <Route
+                      path="/product/:productId"
+                      element={<ProductPage />}
+                    />
 
-                  <Route path="/cart" element={<Cart />} />
+                    <Route path="/cart" element={<Cart />} />
 
-                  <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/checkout" element={<Checkout />} />
 
-                  <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
 
-                  <Route
-                    path="/order-success/:orderId"
-                    element={<OrderSuccess />}
-                  />
+                    <Route
+                      path="/order-success/:orderId"
+                      element={<OrderSuccess />}
+                    />
 
-                  <Route path="/admin" element={<AdminPanel />} />
+                    <Route path="/my-orders" element={<OrderTracking />} />
 
-                  {/* Catch All Route */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
+                    <Route
+                      path="/my-orders/:orderId"
+                      element={<OrderTracking />}
+                    />
 
+                    <Route path="/admin" element={<AdminPanel />} />
+
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                  <Footer />
+                </BrowserRouter>
+              </div>
             </TooltipProvider>
           </AdminProvider>
         </WishlistProvider>

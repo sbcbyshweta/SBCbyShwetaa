@@ -1,79 +1,184 @@
-import { Request, Response } from "express"
-import Order from "../models/Order"
+import { Request, Response } from "express";
+import Order from "../models/Order";
 
-export const createOrder = async (req:Request,res:Response)=>{
-try{
+export const createOrder = async (req: Request, res: Response) => {
+  try {
+    console.log("=== CREATE ORDER ===");
+    console.log("Body:", JSON.stringify(req.body, null, 2));
 
-const order = await Order.create(req.body)
+    const { items, amount, paymentId, paymentMethod, customer } = req.body;
 
-res.json(order)
+    if (!customer || !items || !amount) {
+      return res.status(400).json({
+        message: "Missing required fields",
+        error: "customer, items, and amount are required",
+      });
+    }
 
-}catch(error){
-res.status(500).json({message:"Order creation failed"})
-}
-}
+    const fullAddress = [
+      customer.address,
+      customer.city,
+      customer.state,
+      customer.zipCode,
+      customer.country,
+    ]
+      .filter(Boolean)
+      .join(", ");
 
-export const getOrders = async (req:Request,res:Response)=>{
-try{
+    const products = items.map((item: any) => ({
+      productId: item.id || item.productId,
+      quantity: item.quantity || 1,
+      name: item.name,
+      price: item.price,
+      image: item.image,
+      category: item.category,
+    }));
 
-const orders = await Order.find().sort({createdAt:-1})
+    const order = await Order.create({
+      customerName:
+        `${customer.firstName || ""} ${customer.lastName || ""}`.trim(),
+      email: customer.email,
+      phone: customer.phone,
+      address: fullAddress,
+      products,
+      totalAmount: amount,
+      status: "pending",
+      paymentMethod: paymentMethod || "cod",
+      paymentId: paymentId || "",
+    });
 
-res.json(orders)
+    console.log("Order created:", order._id);
 
-}catch(error){
-res.status(500).json({message:"Failed to fetch orders"})
-}
-}
+    const populatedOrder = await Order.findById(order._id).populate(
+      "products.productId",
+      "name image price",
+    );
 
-export const updateOrderStatus = async (req:Request,res:Response)=>{
+    res.json({
+      success: true,
+      message: "Order placed successfully",
+      orderId: order._id,
+      order: populatedOrder,
+    });
+  } catch (error: any) {
+    console.error("CREATE ORDER ERROR:", error);
+    res.status(500).json({
+      message: "Order creation failed",
+      error: error.message,
+    });
+  }
+};
 
-try{
+export const getOrders = async (req: Request, res: Response) => {
+  try {
+    console.log("=== GET ALL ORDERS ===");
 
-const { id } = req.params
-const { status } = req.body
+    const orders = await Order.find()
+      .populate("products.productId", "name image price")
+      .sort({ createdAt: -1 });
 
-console.log("ORDER ID:", id)
-console.log("STATUS:", status)
+    console.log(`Found ${orders.length} orders`);
 
-const order = await Order.findByIdAndUpdate(
-id,
-{ status },
-{ new:true }
-)
+    res.json(orders);
+  } catch (error: any) {
+    console.error("GET ORDERS ERROR:", error);
+    res.status(500).json({
+      message: "Failed to fetch orders",
+      error: error.message,
+    });
+  }
+};
 
-if(!order){
-return res.status(404).json({
-message:"Order not found"
-})
-}
+export const getMyOrders = async (req: Request, res: Response) => {
+  try {
+    console.log("=== GET MY ORDERS ===");
+    console.log("Query:", req.query);
 
-res.json({
-message:"Order status updated",
-order
-})
+    const { email } = req.query;
 
-}catch(error){
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required",
+      });
+    }
 
-console.log("ORDER STATUS ERROR:",error)
+    const orders = await Order.find({ email })
+      .populate("products.productId", "name image price")
+      .sort({ createdAt: -1 });
 
-res.status(500).json({
-message:"Error updating order status"
-})
+    console.log(`Found ${orders.length} orders for ${email}`);
 
-}
+    res.json(orders);
+  } catch (error: any) {
+    console.error("GET MY ORDERS ERROR:", error);
+    res.status(500).json({
+      message: "Failed to fetch orders",
+      error: error.message,
+    });
+  }
+};
 
-}
+export const getOrderById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
 
-export const deleteOrder = async (req:Request,res:Response)=>{
-try{
+    console.log("=== GET ORDER BY ID ===", id);
 
-const {id} = req.params
+    const order = await Order.findById(id).populate(
+      "products.productId",
+      "name image price",
+    );
 
-await Order.findByIdAndDelete(id)
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
 
-res.json({message:"Order deleted"})
+    res.json(order);
+  } catch (error: any) {
+    console.error("GET ORDER ERROR:", error);
+    res.status(500).json({
+      message: "Failed to fetch order",
+      error: error.message,
+    });
+  }
+};
 
-}catch(error){
-res.status(500).json({message:"Delete failed"})
-}
-}
+export const updateOrderStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    console.log("ORDER ID:", id);
+    console.log("STATUS:", status);
+
+    const order = await Order.findByIdAndUpdate(id, { status }, { new: true });
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
+
+    res.json({
+      message: "Order status updated",
+      order,
+    });
+  } catch (error) {
+    console.log("ORDER STATUS ERROR:", error);
+    res.status(500).json({
+      message: "Error updating order status",
+    });
+  }
+};
+
+export const deleteOrder = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    await Order.findByIdAndDelete(id);
+
+    res.json({ message: "Order deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Delete failed" });
+  }
+};

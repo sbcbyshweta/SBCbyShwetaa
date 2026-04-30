@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { useCart } from "@/context/CartContext";
 import { ArrowLeft, Loader, Check } from "lucide-react";
+import { API_URL } from "@/lib/api";
 
 declare global {
   interface Window {
@@ -10,10 +11,7 @@ declare global {
   }
 }
 
-const API_BASE = "https://sbc-backend-u2sm.onrender.com/api";
-
 export default function Checkout() {
-
   const navigate = useNavigate();
   const { cart, getTotal, clearCart } = useCart();
 
@@ -39,10 +37,7 @@ export default function Checkout() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
           <div className="text-center">
-
-            <h2 className="heading-sm text-foreground mb-4">
-              Cart is Empty
-            </h2>
+            <h2 className="heading-sm text-foreground mb-4">Cart is Empty</h2>
 
             <p className="text-muted-foreground mb-8">
               Please add items to your cart before checkout.
@@ -54,7 +49,6 @@ export default function Checkout() {
             >
               Continue Shopping
             </Link>
-
           </div>
         </div>
       </div>
@@ -66,9 +60,8 @@ export default function Checkout() {
   const total = subtotal + shipping;
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
-
     const { name, value } = e.target;
 
     setFormData((prev) => ({
@@ -78,7 +71,6 @@ export default function Checkout() {
   };
 
   const validateForm = () => {
-
     if (
       !formData.firstName ||
       !formData.email ||
@@ -108,10 +100,21 @@ export default function Checkout() {
   /* ---------------- CREATE ORDER IN BACKEND ---------------- */
 
   const createOrder = async (paymentId = "", method = "razorpay") => {
-
     try {
+      console.log("Creating order with data:", {
+        items: cart,
+        amount: total,
+        paymentMethod: method,
+        customer: formData,
+      });
 
-      const response = await fetch(`${API_BASE}/orders`, {
+      localStorage.setItem("customerEmail", formData.email);
+      localStorage.setItem(
+        "customerName",
+        `${formData.firstName} ${formData.lastName}`,
+      );
+
+      const response = await fetch(`${API_URL}/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -126,23 +129,27 @@ export default function Checkout() {
       });
 
       const data = await response.json();
+      console.log("Order response:", data);
 
-      clearCart();
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "Order creation failed");
+      }
 
-      navigate(`/order-success/${data.orderId || Date.now()}`);
-
-    } catch (error) {
-
-      console.error("Order creation failed", error);
-      alert("Order creation failed");
-
+      if (data.success) {
+        clearCart();
+        navigate(`/my-orders/${data.orderId}`);
+      } else {
+        throw new Error(data.message || "Order creation failed");
+      }
+    } catch (error: any) {
+      console.error("Order creation failed:", error);
+      alert(error.message || "Order creation failed. Please try again.");
     }
   };
 
   /* ---------------- RAZORPAY ---------------- */
 
   const initializeRazorpay = async () => {
-
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -164,9 +171,7 @@ export default function Checkout() {
   };
 
   const handleRazorpayPayment = () => {
-
     const options = {
-
       key: "rzp_test_1DP5ibkZiHnrPh",
 
       amount: total * 100,
@@ -188,9 +193,7 @@ export default function Checkout() {
       },
 
       handler: async (response: any) => {
-
         await createOrder(response.razorpay_payment_id, "razorpay");
-
       },
 
       modal: {
@@ -210,25 +213,19 @@ export default function Checkout() {
   /* ---------------- COD ---------------- */
 
   const handleCOD = async () => {
-
     if (!validateForm()) return;
 
     await createOrder("", "cod");
-
   };
 
   return (
-
     <div className="min-h-screen bg-background">
-
       <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
-
         {/* Header */}
 
         <div className="mb-8">
-
           <Link
             to="/cart"
             className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors mb-4"
@@ -237,32 +234,23 @@ export default function Checkout() {
             Back to Cart
           </Link>
 
-          <h1 className="heading-md text-foreground">
-            Checkout
-          </h1>
-
+          <h1 className="heading-md text-foreground">Checkout</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
           {/* FORM SECTION */}
 
           <div className="lg:col-span-2">
-
             <div className="bg-white rounded-lg border border-border p-6 md:p-8">
-
               {/* Delivery Address */}
 
               <div className="mb-8">
-
                 <h2 className="font-semibold text-lg text-foreground mb-6">
                   Delivery Address
                 </h2>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
-
                   <div>
-
                     <label className="block text-sm font-medium text-foreground mb-2">
                       First Name *
                     </label>
@@ -274,11 +262,9 @@ export default function Checkout() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                     />
-
                   </div>
 
                   <div>
-
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Last Name
                     </label>
@@ -290,15 +276,12 @@ export default function Checkout() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                     />
-
                   </div>
-
                 </div>
 
                 {/* EMAIL */}
 
                 <div className="mb-4">
-
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Email Address *
                   </label>
@@ -310,13 +293,11 @@ export default function Checkout() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
-
                 </div>
 
                 {/* PHONE */}
 
                 <div className="mb-4">
-
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Phone Number *
                   </label>
@@ -328,13 +309,11 @@ export default function Checkout() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
-
                 </div>
 
                 {/* ADDRESS */}
 
                 <div className="mb-4">
-
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Street Address *
                   </label>
@@ -346,13 +325,11 @@ export default function Checkout() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
-
                 </div>
 
                 {/* CITY STATE */}
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
-
                   <input
                     type="text"
                     name="city"
@@ -370,13 +347,11 @@ export default function Checkout() {
                     onChange={handleInputChange}
                     className="px-4 py-3 border border-border rounded-lg"
                   />
-
                 </div>
 
                 {/* ZIP */}
 
                 <div className="grid grid-cols-2 gap-4">
-
                   <input
                     type="text"
                     name="zipCode"
@@ -396,23 +371,18 @@ export default function Checkout() {
                     <option>USA</option>
                     <option>UK</option>
                   </select>
-
                 </div>
-
               </div>
 
               {/* PAYMENT */}
 
               <div className="pt-8 border-t border-border">
-
                 <h2 className="font-semibold text-lg text-foreground mb-6">
                   Payment Method
                 </h2>
 
                 <div className="space-y-3 mb-6">
-
                   <label className="flex items-center p-4 border border-border rounded-lg cursor-pointer">
-
                     <input
                       type="radio"
                       value="razorpay"
@@ -420,14 +390,10 @@ export default function Checkout() {
                       onChange={(e) => setPaymentMethod(e.target.value)}
                     />
 
-                    <span className="ml-4">
-                      Online Payment (Razorpay)
-                    </span>
-
+                    <span className="ml-4">Online Payment (Razorpay)</span>
                   </label>
 
                   <label className="flex items-center p-4 border border-border rounded-lg cursor-pointer">
-
                     <input
                       type="radio"
                       value="cod"
@@ -435,12 +401,8 @@ export default function Checkout() {
                       onChange={(e) => setPaymentMethod(e.target.value)}
                     />
 
-                    <span className="ml-4">
-                      Cash on Delivery
-                    </span>
-
+                    <span className="ml-4">Cash on Delivery</span>
                   </label>
-
                 </div>
 
                 <button
@@ -452,82 +414,49 @@ export default function Checkout() {
                   disabled={isLoading}
                   className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium flex items-center justify-center gap-2"
                 >
-
-                  {isLoading && (
-                    <Loader size={18} className="animate-spin" />
-                  )}
+                  {isLoading && <Loader size={18} className="animate-spin" />}
 
                   {isLoading
                     ? "Processing..."
                     : paymentMethod === "razorpay"
-                    ? "Pay Now"
-                    : "Place Order"}
-
+                      ? "Pay Now"
+                      : "Place Order"}
                 </button>
-
               </div>
-
             </div>
-
           </div>
 
           {/* ORDER SUMMARY */}
 
           <div className="lg:col-span-1">
-
             <div className="bg-white rounded-lg border border-border p-6 sticky top-24">
-
               <h2 className="font-semibold text-foreground text-lg mb-6">
                 Order Summary
               </h2>
 
               <div className="space-y-3 mb-6">
-
                 {cart.map((item) => (
-
                   <div key={item.id} className="flex justify-between text-sm">
-
                     <div>
+                      <p className="font-medium">{item.name}</p>
 
-                      <p className="font-medium">
-                        {item.name}
-                      </p>
-
-                      <p className="text-xs">
-                        Qty: {item.quantity}
-                      </p>
-
+                      <p className="text-xs">Qty: {item.quantity}</p>
                     </div>
 
-                    <p>
-                      ₹{(item.price * item.quantity).toLocaleString()}
-                    </p>
-
+                    <p>₹{(item.price * item.quantity).toLocaleString()}</p>
                   </div>
-
                 ))}
-
               </div>
 
               <div className="flex justify-between font-semibold text-lg">
-
                 <span>Total</span>
 
-                <span>
-                  ₹{total.toLocaleString()}
-                </span>
-
+                <span>₹{total.toLocaleString()}</span>
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </div>
-
     </div>
-
   );
 }

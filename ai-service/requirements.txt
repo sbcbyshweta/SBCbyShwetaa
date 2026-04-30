@@ -1,0 +1,16 @@
+{
+  "name": "sbc-ai-service",
+  "version": "1.0.0",
+  "description": "AI Image Generation Microservice for SBC by Shwetaa",
+  "scripts": {
+    "start": "python main.py",
+    "dev": "python -m uvicorn main:app --reload --port 8000"
+  },
+  "requirements": {
+    "fastapi": ">=0.100.0",
+    "uvicorn": ">=0.23.0",
+    "requests": ">=2.31.0",
+    "python-multipart": ">=0.0.6",
+    "pydantic": ">=2.0.0"
+  }
+}
