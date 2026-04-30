@@ -7,7 +7,6 @@ import { connectDB } from "./config/db";
 import routes from "./routes";
 import path from "path";
 import authRoutes from "./routes/authRoutes";
-import aiRoutes from "./routes/aiRoutes";
 
 dotenv.config();
 
@@ -56,7 +55,6 @@ export function createServer() {
 
   app.use("/api", authRoutes);
   app.use("/api", routes);
-  app.use("/api/ai", aiRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
