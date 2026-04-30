@@ -26,6 +26,7 @@ import {
   ClipboardList,
   ChevronDown,
 } from "lucide-react";
+import { API_URL, BACKEND_URL } from "@/lib/api";
 
 interface Product {
   _id: string;
@@ -85,9 +86,6 @@ const categoryColors: Record<string, string> = {
 const formatPrice = (price: number) => {
   return `₹${price.toLocaleString("en-IN")}`;
 };
-
-const API_URL = "/api";
-const IMAGE_URL = "/uploads";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -332,7 +330,7 @@ export default function AdminPanel() {
       if (product.image.startsWith("http")) {
         setUploadPreview(product.image);
       } else {
-        setUploadPreview(`${IMAGE_URL}${product.image}`);
+        setUploadPreview(getImageUrl(product.image));
       }
     }
     setShowAddForm(true);
@@ -486,8 +484,8 @@ export default function AdminPanel() {
   const getImageUrl = (image: string) => {
     if (!image) return "";
     if (image.startsWith("http")) return image;
-    if (image.startsWith("/uploads")) return image;
-    return `${IMAGE_URL}${image}`;
+    if (image.startsWith("/uploads")) return `${BACKEND_URL}${image}`;
+    return `${BACKEND_URL}/uploads/${image}`;
   };
 
   const isAdmin = localStorage.getItem("token");
