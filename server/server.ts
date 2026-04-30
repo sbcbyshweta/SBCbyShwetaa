@@ -15,6 +15,8 @@ export function createServer() {
 
   app.use(
     helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+      crossOriginEmbedderPolicy: false,
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
@@ -60,7 +62,7 @@ export function createServer() {
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-  app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+  app.use("/uploads", cors(), express.static(path.join(__dirname, "uploads")));
 
   app.use("/api", authRoutes);
   app.use("/api", routes);
